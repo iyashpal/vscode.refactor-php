@@ -1,8 +1,9 @@
 {
-  "name": "refactor-php",
+	"name": "refactor-php",
 	"displayName": "Refactor PHP",
 	"description": "Refactor your php code in VS Code.",
 	"version": "0.0.1",
+	"preview": true,
 	"engines": {
 		"vscode": "^1.71.0"
 	},
@@ -10,16 +11,11 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:refactor-php.helloWorld"
+		"onLanguage:php"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
-		"commands": [
-			{
-				"command": "refactor-php.helloWorld",
-				"title": "Hello World"
-			}
-		]
+		"commands": []
 	},
 	"scripts": {
 		"vscode:prepublish": "yarn run package",
