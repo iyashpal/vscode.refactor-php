@@ -4,6 +4,7 @@
 	"description": "Refactor your php code in VS Code.",
 	"version": "0.0.1",
 	"preview": true,
+	"publisher": "iyashpal",
 	"engines": {
 		"vscode": "^1.71.0"
 	},

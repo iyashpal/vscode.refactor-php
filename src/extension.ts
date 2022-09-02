@@ -1,25 +1,16 @@
 import * as vscode from 'vscode';
 import { subscribeToDocumentChanges, EMOJI_MENTION } from './diagnostics';
+import { NamespaceResolver } from './Resolvers';
 
-export function activate (context: vscode.ExtensionContext) {
+export async function activate (context: vscode.ExtensionContext) {
 	// Log the activation text.
 	console.log('Refactor PHP extension activated.');
 
 	context.subscriptions.push(
-		vscode.languages.registerCodeActionsProvider('php', new Emojizer(), {
-			providedCodeActionKinds: Emojizer.providedCodeActionKinds
-		})
-	);
-
-	const emojiDiagnostics = vscode.languages.createDiagnosticCollection('emoji');
-
-	context.subscriptions.push(emojiDiagnostics);
-
-	subscribeToDocumentChanges(context, emojiDiagnostics);
-
-	context.subscriptions.push(
-		vscode.languages.registerCodeActionsProvider('php', new Emojinfo(), {
-			providedCodeActionKinds: Emojinfo.providedCodeActionKinds
+		vscode.languages.registerCodeActionsProvider('php', new NamespaceResolver(), {
+			providedCodeActionKinds: [
+				vscode.CodeActionKind.QuickFix
+			]
 		})
 	);
 }
@@ -36,6 +27,22 @@ export class Emojizer implements vscode.CodeActionProvider {
 		if (!this.isAtStartOfSmiley(document, range)) {
 			return;
 		}
+
+		vscode.window.activeTextEditor?.selections.map(selection => {
+			console.log(typeof selection)
+			if ((typeof selection) === 'string') {
+				console.log(selection);
+			}
+
+			let wordRange = vscode.window.activeTextEditor?.document.getWordRangeAtPosition(selection.active, new RegExp(/.+/));
+
+			if (wordRange) {
+				console.log(vscode.window.activeTextEditor?.document.getText(wordRange));
+			}
+
+		});
+
+
 
 		const replaceWithSmileyCatFix = this.createFix(document, range, `😺`);
 
