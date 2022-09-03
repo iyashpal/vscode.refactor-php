@@ -3,54 +3,39 @@ import { BuiltInClasses } from ".";
 
 export default class NamespaceResolver implements vscode.CodeActionProvider {
 
-    /**
-     * Regular expression to grab the class namespace.
-     */
-    public static readonly lookupExp: RegExp = new RegExp(/[a-zA-Z0-9\\]+/);
+    private namespace: string = '';
 
+    private actions: vscode.CodeAction[] = [];
 
-    public async import (selection: vscode.Selection) {
+    private action: 'expand' | 'import' = 'import';
 
-    }
+    private selection: vscode.Selection = {} as vscode.Selection;
 
-    public async extend () {
+    private document: vscode.TextDocument = {} as vscode.TextDocument;
 
-    }
-
-
-    private lookupNamespace (selection: vscode.Selection) {
-
-    }
-
+    private readonly lookupExp: RegExp = new RegExp(/[a-zA-Z0-9\\]+/);
 
 
     public async provideCodeActions (document: vscode.TextDocument, selection: vscode.Selection, context: vscode.CodeActionContext, token: vscode.CancellationToken): Promise<(vscode.CodeAction | vscode.Command)[]> {
-        const actions: vscode.CodeAction[] = [];
 
-        let namespace = this.findNamespace(document, selection);
+        this.document = document;
 
-        if (/\\/.test(namespace)) {
-            let [useStatements, decelerationLines] = this.getDecelerations(namespace.replace(/^\\?/, ''), document);
+        this.selection = selection;
 
-            let classBasename = namespace.match(/\w+/g)?.pop();
+        this.namespace = this.findNamespace(document, selection);
 
-            if (classBasename) {
-                actions.push(this.resolve(document, selection, classBasename));
-            }
+        await this.resolveSelection(selection, document);
 
-        } else {
-            let files = await vscode.workspace.findFiles(`**/${ namespace }.php`, undefined, 10);
-            
-            let namespaces = await this.findNamespaces(namespace, files);
-
-            for (let i in namespaces) {
-                actions.push(this.resolve(document, selection, `\\${ namespaces[i] }`));
-            }
-        }
-
-        return actions ?? null;
+        return this.actions;
     }
 
+    public async inlineImport (selection: vscode.Selection) {
+
+    }
+
+    public async useImport () {
+
+    }
 
     /**
      * Find the namespace from selection.
@@ -59,41 +44,98 @@ export default class NamespaceResolver implements vscode.CodeActionProvider {
      * @param selection 
      * @returns {boolean | string}
      */
-    private findNamespace (document: vscode.TextDocument, selection: vscode.Selection | undefined): string {
-        if (selection === undefined) {
+    private findNamespace (document: vscode.TextDocument, selection: vscode.Selection): string {
+        if (this.selection === undefined) {
 
             return '';
         }
 
-        let range = document.getWordRangeAtPosition(selection.active, NamespaceResolver.lookupExp);
+        let range = document.getWordRangeAtPosition(selection.active, this.lookupExp);
 
         return range ? document.getText(range) : '';
     }
 
-    private async resolveSelection (selection: vscode.Selection, document: vscode.TextDocument, callback: (action: vscode.CodeAction) => void) {
+    private async resolveSelection (selection: vscode.Selection, document: vscode.TextDocument) {
+        this.actions = [];
+
         let namespace = this.findNamespace(document, selection);
 
         if (/\\/.test(namespace)) {
-            let [useStatements, decelerationLines] = this.getDecelerations(namespace.replace(/^\\?/, ''), document);
+            this.action = 'import';
+            let { useStatements } = this.getDecelerations(namespace.replace(/^\\?/, ''), document);
 
             let classBasename = namespace.match(/\w+/g)?.pop();
 
+            let isSelectionOnUseStatements = useStatements.some(({ line }) => line === selection.active.line);
+
+            if (classBasename && !isSelectionOnUseStatements) {
+
+                this.actions.push(this.resolve(document, selection, classBasename));
+            }
 
         } else {
+            this.action = 'expand';
             let files = await vscode.workspace.findFiles(`**/${ namespace }.php`, undefined, 10);
+
             let namespaces = await this.findNamespaces(namespace, files);
 
-            callback(this.resolve(document, selection, 'testing a'));
-            console.log(files, namespaces);
+            for (let i in namespaces) {
+                this.actions.push(this.resolve(document, selection, `\\${ namespaces[i] }`));
+            }
         }
+    }
+
+    async doImport (editor: vscode.WorkspaceEdit) {
+        if (this.action === 'import') {
+            let namespace = this.findNamespace(this.document, this.selection);
+
+            namespace = namespace.replace(/^\\?/, '');
+
+            let { useStatements, decelerations } = this.getDecelerations(namespace, this.document);
+            let [prepend, append, insertLine] = this.getInsertLine(decelerations);
+
+            let range = new vscode.Range(new vscode.Position(Number(insertLine), 0), new vscode.Position(Number(insertLine) + 1, 0));
+
+            let isSelectionOnUseStatements = useStatements.some(({ text }) => {
+                return text.match(/(\w+)/g)?.pop() === namespace.match(/(\w+)/g)?.pop();
+            });
+
+            if (!isSelectionOnUseStatements) {
+                editor.replace(this.document.uri, range, `${ prepend }use ${ namespace };${ append }`);
+            }
+        }
+    }
+
+    getInsertLine (declarationLines: { phpTag?: number, namespace?: number, useStatement?: number, class?: number }) {
+        let prepend = declarationLines.phpTag === 0 ? '' : '\n';
+        let append = '\n';
+        let insertLine = declarationLines.phpTag;
+
+        if (prepend === '' && declarationLines.namespace) {
+            prepend = '\n';
+        }
+
+        if (declarationLines.useStatement) {
+            prepend = '';
+            insertLine = declarationLines.useStatement;
+        } else if (declarationLines.namespace) {
+            insertLine = declarationLines.namespace;
+        }
+
+        if (declarationLines.class && declarationLines.useStatement && declarationLines.phpTag && declarationLines.namespace) {
+            if (((declarationLines.class - declarationLines.useStatement) <= 1 || (declarationLines.class - declarationLines.namespace) <= 1 || (declarationLines.class - declarationLines.phpTag) <= 1)) {
+
+            }
+            append = '\n\n';
+        }
+
+        return [prepend, append, insertLine];
     }
 
 
     private findNamespaces (namespace: string, files: vscode.Uri[]): Promise<any> {
         return new Promise((resolve, reject) => {
             let textDocuments = this.getTextDocuments(files, namespace);
-
-            // console.log(textDocuments);
 
             Promise.all(textDocuments).then(docs => {
                 let parsedNamespaces = this.parseNamespaces(docs, namespace);
@@ -157,8 +199,8 @@ export default class NamespaceResolver implements vscode.CodeActionProvider {
 
     }
 
-    private getDecelerations (namespace: string, document: vscode.TextDocument) {
-        let useStatements = [];
+    private getDecelerations (namespace: string, document: vscode.TextDocument): { useStatements: { text: string, line: number }[], decelerations: object } {
+        let useStatements: object[] = [];
         let declarationLines = {
             phpTag: 0,
             namespace: 0,
@@ -168,11 +210,7 @@ export default class NamespaceResolver implements vscode.CodeActionProvider {
 
         for (let line = 0; line < document.lineCount; line++) {
             let lineNumber = line + 1;
-            let text = document.lineAt(line).text;
-
-            if (namespace !== null && text === `use ${ namespace };`) {
-                break;
-            }
+            let text = document.lineAt(line).text.trim();
 
             // break if all declarations were found.
             if (declarationLines.phpTag && declarationLines.namespace && declarationLines.useStatement && declarationLines.class) {
@@ -191,20 +229,29 @@ export default class NamespaceResolver implements vscode.CodeActionProvider {
             }
         }
 
-        return [useStatements, declarationLines];
+        return { useStatements, decelerations: declarationLines };
     }
 
 
     private resolve (document: vscode.TextDocument, selection: vscode.Selection, text: string): vscode.CodeAction {
+        let message = `Convert to ${ text }`;
 
-        const fix = new vscode.CodeAction(`Convert to ${ text }`, vscode.CodeActionKind.QuickFix);
+        if (this.action === 'expand') {
+            message = `Expand to ${ text }`;
+        }
 
-        let range = document.getWordRangeAtPosition(selection.active, NamespaceResolver.lookupExp);
+
+
+        const fix = new vscode.CodeAction(message, vscode.CodeActionKind.Refactor);
+
+        let range = document.getWordRangeAtPosition(selection.active, this.lookupExp);
 
         if (range) {
             fix.edit = new vscode.WorkspaceEdit();
 
             fix.edit.replace(document.uri, range, text);
+
+            this.doImport(fix.edit);
         }
 
 
