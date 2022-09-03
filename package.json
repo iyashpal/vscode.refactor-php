@@ -2,14 +2,22 @@
 	"name": "refactor-php",
 	"displayName": "Refactor PHP",
 	"description": "Refactor your php code in VS Code.",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"preview": true,
 	"publisher": "iyashpal",
+	"bugs": {
+		"url": "https://github.com/iyashpal/vscode.refactor-php/issues",
+		"email": "iyashpal.dev@gmail.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/iyashpal/vscode.refactor-php"
+	},
 	"engines": {
 		"vscode": "^1.71.0"
 	},
 	"categories": [
-		"Other"
+		"Other", "Programming Languages"
 	],
 	"activationEvents": [
 		"onLanguage:php"

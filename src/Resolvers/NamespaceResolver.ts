@@ -132,9 +132,7 @@ export default class NamespaceResolver implements vscode.CodeActionProvider {
             this.openedDocumentsNamespaces.unshift(this.getUsableNamespace());
         }
 
-        // If namespace can't be parsed but there is a file with the same
-        // name of selected text then assuming it's a global class and
-        // add that in the parsedNamespaces array as a global class.
+        // If document file available and the namespace is missing just add the selected namespace as the class maybe globally added.
         if (this.openedDocumentsNamespaces.length === 0 && documents.length > 0) {
             this.openedDocumentsNamespaces.push(this.getUsableNamespace());
         }
