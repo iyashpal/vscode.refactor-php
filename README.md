@@ -12,5 +12,3 @@ This package extends VS Code's functionality to refactor the php code. This pack
 
 # License
 [MIT](./LICENSE) License.
-
-Copyright (c) 2017 Mehedi Hassan
