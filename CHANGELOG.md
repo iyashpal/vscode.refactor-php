@@ -4,6 +4,6 @@ All notable changes to the "refactor-php" extension will be documented in this f
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.0.3]
 
-- Initial release
+- Extension logo added.

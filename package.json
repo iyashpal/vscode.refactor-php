@@ -2,7 +2,7 @@
 	"name": "refactor-php",
 	"displayName": "Refactoring (PHP)",
 	"description": "Refactor your php code in VS Code.",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"preview": true,
 	"publisher": "iyashpal",
 	"bugs": {
@@ -24,6 +24,7 @@
 		"onLanguage:php"
 	],
 	"main": "./dist/extension.js",
+	"icon": "./assets/images/icon.png",
 	"contributes": {
 		"commands": [
 			{
@@ -43,17 +44,15 @@
 				},
 				"php.refactoring.imports.sorting.type": {
 					"type": "string",
-					"default": "length",
+					"default": "natural",
 					"order": 1,
 					"enum": [
 						"alphabet",
-						"length",
-						"onSave"
+						"natural"
 					],
 					"enumDescriptions": [
-						"Sort imports by alphabet",
-						"Sort imports by line length.",
-						"Sort imports on file save."
+						"Sort imports in alphabetical order instead of 'natural order' algorithm",
+						"Sort imports using a 'natural order' algorithm."
 					]
 				},
 				"php.refactoring.imports.sorting.order": {
